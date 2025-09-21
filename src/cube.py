@@ -27,4 +27,4 @@ class Cube:
     @error_handler
     def undo():
         shutil.rmtree(f".{NAME}")
-        logger.info(f"Reset the VCS successfully.")
+        logger.info(f"VCS reset successfull.")

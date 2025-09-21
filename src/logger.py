@@ -1,14 +1,22 @@
 import logging
 
 class ColorFormatter(logging.Formatter):
-    COLORS = {
-        "DEBUG": "\033[36m",        # Cyan
-        "INFO": "\033[32m",         # Green
-        "WARNING": "\033[33m",      # Yellow
-        "ERROR": "\033[31m",        # Red
-        "CRITICAL": "\033[1;31m",   # Bold Red
+    ASCII_CODES = {
+        "reset": "\033[0m",
+        "cyan": "\033[36m",
+        "green": "\033[32m",
+        "yellow": "\033[33m",
+        "red": "\033[31m",
+        "bold_red": "\033[1;31m",   
     }
-    RESET = "\033[0m"
+    COLORS = {
+        "DEBUG": ASCII_CODES["cyan"],
+        "INFO": ASCII_CODES["green"],
+        "WARNING": ASCII_CODES["yellow"],
+        "ERROR": ASCII_CODES["red"],
+        "CRITICAL": ASCII_CODES["bold_red"],
+    }
+    RESET = ASCII_CODES["reset"]
 
     def format(self, record):
         log_color = self.COLORS.get(record.levelname, self.RESET)

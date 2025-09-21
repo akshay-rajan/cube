@@ -1,8 +1,8 @@
 import os
 import shutil
 
-from src.config import cli
-import src.utils as utils
+from src.config import cli, error_handler
+from src.utils import set_head
 from src.logger import logger
 from src.constants import NAME
 
@@ -11,22 +11,20 @@ class Cube:
 
     @staticmethod
     @cli.command(name="init")
+    @error_handler
     def __init__():
-        try:
-            if not os.path.isdir(f".{NAME}"):
-                os.mkdir(f".{NAME}")
-                os.mkdir(f".{NAME}/objects")
-                os.makedirs(f".{NAME}/refs/heads")
-                utils.set_head("main")
-                logger.info("VCS initialized.")
-        except OSError as e:
-            logger.error(e)
+        if not os.path.isdir(f".{NAME}"):
+            os.mkdir(f".{NAME}")
+            os.mkdir(f".{NAME}/objects")
+            os.makedirs(f".{NAME}/refs/heads")
+            logger.info("VCS initialized.")
+        else:
+            logger.info("VCS is already initialized.")
+        set_head("main")
 
     @staticmethod
     @cli.command()
+    @error_handler
     def undo():
-        try:
-            shutil.rmtree(f".{NAME}")
-            logger.info(f"Reset the VCS successfully.")
-        except OSError as e:
-            logger.error(e)
+        shutil.rmtree(f".{NAME}")
+        logger.info(f"Reset the VCS successfully.")

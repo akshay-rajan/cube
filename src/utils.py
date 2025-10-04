@@ -1,3 +1,5 @@
+import os
+from hashlib import sha1
 from src.logger import logger
 from src.constants import NAME
 
@@ -5,5 +7,31 @@ from src.constants import NAME
 def set_head(branch: str):
     """Sets the head to point to a branch"""
     with open(f".{NAME}/HEAD", "w") as file:
-        file.write(f"ref: refs/heads/{branch}")
+        file.write(f"refs/heads/{branch}")
     logger.info(f"HEAD set to refs/heads/{branch}")
+
+def hash_file(filepath: str) -> str:
+    """Returns the SHA-1 hash of the file content"""
+
+    sha = sha1()
+    with open(filepath, 'rb') as f:
+        while chunk := f.read(8192):
+            sha.update(chunk)
+    return sha.hexdigest()
+
+def to_blob(filepath: str) -> str:
+    """Converts a file to a blob and stores it in the objects directory"""
+
+    file_hash = hash_file(filepath)
+    object_path = f".{NAME}/objects/{file_hash}"
+
+    if not os.path.exists(object_path):
+        with open(filepath, 'rb') as src_file:
+            content = src_file.read()
+        with open(object_path, 'wb') as obj_file:
+            obj_file.write(content)
+        logger.info(f"File '{filepath}' stored as blob with hash {file_hash}.")
+    else:
+        logger.info(f"Blob with hash {file_hash} already exists.")
+
+    return file_hash

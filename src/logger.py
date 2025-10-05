@@ -24,12 +24,7 @@ class ColorFormatter(logging.Formatter):
         return f"{log_color}{message}{self.RESET}"
 
 handler = logging.StreamHandler()
-handler.setFormatter(
-    ColorFormatter(
-        "%(asctime)s - %(levelname)s - %(name)s - %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S"
-    )
-)
+handler.setFormatter(ColorFormatter("%(message)s"))
 
 logger = logging.getLogger("cube")
 logger.setLevel(logging.DEBUG)

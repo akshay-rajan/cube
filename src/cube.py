@@ -25,13 +25,6 @@ class Cube:
         set_head("main")
 
     @staticmethod
-    @cli.command()
-    @error_handler
-    def undo():
-        shutil.rmtree(f".{NAME}")
-        logger.info(f"VCS reset successful.")
-
-    @staticmethod
     def is_initialized() -> bool:
         if not os.path.isdir(f".{NAME}"):
             logger.error("VCS is not initialized. Please run 'init' command first.")
@@ -40,7 +33,16 @@ class Cube:
 
     @staticmethod
     @cli.command()
-    @click.argument("filename")
+    @error_handler
+    def undo():
+        if not Cube.is_initialized():
+            return
+        shutil.rmtree(f".{NAME}")
+        logger.info(f"VCS reset successful.")
+
+    @staticmethod
+    @cli.command()
+    @click.argument("filepath")
     @error_handler
     def add(filepath: str):
         if not Cube.is_initialized():
@@ -62,20 +64,21 @@ class Cube:
         with open(f".{NAME}/index", "r") as index_file:
             staged = index_file.readlines()
 
-        if not staged:
-            logger.info("No files staged.")
-            return
-
         staged_paths = []
         staged_msg, modified_msg = "", ""
-        for entry in staged:
-            file_hash, filepath = entry.strip().split(" ", 1)
-            staged_paths.append(filepath)
-            current_hash = hash_file(filepath) if os.path.isfile(filepath) else None
-            if current_hash == file_hash:
-                staged_msg += f"\n\t{file_hash} {filepath}"
-            else:
-                modified_msg += f"\n\t{file_hash} {filepath} -> {current_hash or 'deleted'}"
+
+        if not staged:
+            logger.info("No files staged.")
+        else:
+            for entry in staged:
+                file_hash, filepath = entry.strip().split(" ", 1)
+                staged_paths.append(filepath)
+                current_hash = hash_file(filepath) if os.path.isfile(filepath) else None
+                file_info = f"{filepath} {file_hash}"
+                if current_hash == file_hash:
+                    staged_msg += f"\n\t{file_info}"
+                else:
+                    modified_msg += f"\n\t{file_info} -> {current_hash or 'deleted'}"
 
         untracked, untracked_msg = [], ""
         for root, _, files in os.walk("."):
@@ -98,6 +101,6 @@ class Cube:
 
         msg = (
             f"\nTotal {len(staged)} file(s) staged."
-            f"\nCurrent HEAD is at {open(f'.{NAME}/HEAD').read().strip()}."
+            f"\nHEAD is at {open(f'.{NAME}/HEAD').read().strip()}."
         )
         logger.warning(msg)

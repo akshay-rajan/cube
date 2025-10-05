@@ -3,7 +3,7 @@ import shutil
 import click
 
 from src.config import cli, error_handler
-from src.utils import set_head, to_blob
+from src.utils import set_head, stage_file, hash_file
 from src.logger import logger
 from src.constants import NAME
 
@@ -29,19 +29,75 @@ class Cube:
     @error_handler
     def undo():
         shutil.rmtree(f".{NAME}")
-        logger.info(f"VCS reset successfull.")
+        logger.info(f"VCS reset successful.")
+
+    @staticmethod
+    def is_initialized() -> bool:
+        if not os.path.isdir(f".{NAME}"):
+            logger.error("VCS is not initialized. Please run 'init' command first.")
+            return False
+        return True
 
     @staticmethod
     @cli.command()
     @click.argument("filename")
     @error_handler
-    def add(filename: str):
-        if not os.path.isdir(f".{NAME}"):
-            logger.error("VCS is not initialized. Please run 'init' command first.")
+    def add(filepath: str):
+        if not Cube.is_initialized():
             return
-        if not os.path.isfile(filename):
-            logger.error(f"File '{filename}' does not exist.")
+        if not os.path.isfile(filepath):
+            logger.error(f"File '{filepath}' does not exist.")
             return
 
-        to_blob(filename)
-        logger.info(f"Staged '{filename}'.")
+        stage_file(filepath)
+        logger.info(f"Staged '{filepath}'.")
+
+    @staticmethod
+    @cli.command()
+    @error_handler
+    def status():
+        if not Cube.is_initialized():
+            return
+
+        with open(f".{NAME}/index", "r") as index_file:
+            staged = index_file.readlines()
+
+        if not staged:
+            logger.info("No files staged.")
+            return
+
+        staged_paths = []
+        staged_msg, modified_msg = "", ""
+        for entry in staged:
+            file_hash, filepath = entry.strip().split(" ", 1)
+            staged_paths.append(filepath)
+            current_hash = hash_file(filepath) if os.path.isfile(filepath) else None
+            if current_hash == file_hash:
+                staged_msg += f"\n\t{file_hash} {filepath}"
+            else:
+                modified_msg += f"\n\t{file_hash} {filepath} -> {current_hash or 'deleted'}"
+
+        untracked, untracked_msg = [], ""
+        for root, _, files in os.walk("."):
+            for file in files:
+                full_path = os.path.relpath(os.path.join(root, file))
+                if full_path.startswith(f".{NAME}/") or full_path in staged_paths:
+                    continue
+                untracked.append(full_path)
+        
+        untracked_msg += "\nUntracked files:"
+        for file in untracked:
+            untracked_msg += f"\n\t{file}"
+        
+        if staged_msg:
+            logger.info(f"\nStaged: {staged_msg}")
+        if modified_msg:
+            logger.error(f"\nModified: {modified_msg}")
+        if untracked:
+            logger.debug(untracked_msg)
+
+        msg = (
+            f"\nTotal {len(staged)} file(s) staged."
+            f"\nCurrent HEAD is at {open(f'.{NAME}/HEAD').read().strip()}."
+        )
+        logger.warning(msg)

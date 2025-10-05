@@ -19,7 +19,7 @@ def hash_file(filepath: str) -> str:
             sha.update(chunk)
     return sha.hexdigest()
 
-def to_blob(filepath: str) -> str:
+def stage_file(filepath: str) -> str:
     """Converts a file to a blob and stores it in the objects directory"""
 
     file_hash = hash_file(filepath)

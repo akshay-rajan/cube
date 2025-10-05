@@ -43,9 +43,5 @@ class Cube:
             logger.error(f"File '{filename}' does not exist.")
             return
 
-        blob_hash = to_blob(filename)
-
-        with open(f".{NAME}/index", "a") as index_file:
-            index_file.write(f"{blob_hash} {filename}\n")
-
-        logger.info(f"File '{filename}' added to staging area.")
+        to_blob(filename)
+        logger.info(f"Staged '{filename}'.")

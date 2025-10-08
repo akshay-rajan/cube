@@ -10,6 +10,7 @@ def set_head(branch: str):
         file.write(f"refs/heads/{branch}")
     logger.info(f"HEAD set to refs/heads/{branch}")
 
+
 def hash_file(filepath: str) -> str:
     """Returns the SHA-1 hash of the file content"""
 
@@ -18,6 +19,13 @@ def hash_file(filepath: str) -> str:
         while chunk := f.read(8192):
             sha.update(chunk)
     return sha.hexdigest()
+
+
+def get_object_path(file_hash: str) -> str:
+    """Returns the path where the object should be stored based on its hash"""
+    first_2_chars, remaining_chars = file_hash[:2], file_hash[2:]
+    return f".{NAME}/objects/{first_2_chars}/{remaining_chars}"
+
 
 def is_indexed(index_file, filepath: str) -> bool:
     """
@@ -32,18 +40,31 @@ def is_indexed(index_file, filepath: str) -> bool:
         i += 1
     return "", -1
 
+
 def overwrite_index(filename: str, lines: list, line_number: int, entry: str):
     """Overwrites the hash of a file in the index"""
     lines[line_number - 1] = entry
     with open(filename, "w") as file:
         file.writelines(lines)
 
+
+def add_object(file_hash: str, filepath: str):
+    object_path = get_object_path(file_hash)
+    os.makedirs(os.path.dirname(object_path), exist_ok=True)
+            
+    with open(filepath, 'rb') as src_file:
+        content = src_file.read()
+    with open(object_path, 'wb') as obj_file:
+        obj_file.write(content)
+    logger.info(f"File '{filepath}' stored at {object_path}.")
+
+
 def delete_object(object_hash: str):
     """
     Deletes an object from the objects directory.
     If the hash is 'a1b2c3...', it deletes the file at '.cube/objects/a1/b2c3...'
     """
-    object_path = f".{NAME}/objects/{object_hash[:2]}/{object_hash[2:]}"
+    object_path = get_object_path(object_hash)
     if os.path.exists(object_path):
         os.remove(object_path)
         dir_path = os.path.dirname(object_path)

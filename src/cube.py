@@ -44,25 +44,14 @@ class Cube:
         """Converts a file to a blob and stores it in the objects directory"""
 
         file_hash = utils.hash_file(filepath)
-        # Object path should be <first two chars>/<remaining chars> of the hash
-        object_path = f".{NAME}/objects/{file_hash[:2]}/{file_hash[2:]}"
+        object_path = utils.get_object_path(file_hash)
 
         if not os.path.exists(object_path):
-            # Create directories to store the object
-            os.makedirs(os.path.dirname(object_path), exist_ok=True)
-            
-            # Read the file content and store it in the repo as a blob
-            with open(filepath, 'rb') as src_file:
-                content = src_file.read()
-            with open(object_path, 'wb') as obj_file:
-                obj_file.write(content)
-            logger.info(f"File '{filepath}' stored at {object_path}.")
+            utils.add_object(file_hash, filepath)
 
-            # Stage the file by adding it to the index in the format "<hash> <filepath>"
             index_filename = f".{NAME}/index"
             index_entry = f"{file_hash} {filepath}\n"
             
-            # Read existing index content
             with open(index_filename, "r") as index_file:
                 lines = index_file.readlines()
             

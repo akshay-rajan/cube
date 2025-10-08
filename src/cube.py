@@ -3,7 +3,7 @@ import shutil
 import click
 
 from src.config import cli, error_handler
-from src.utils import set_head, stage_file, hash_file
+from src import utils
 from src.logger import logger
 from src.constants import NAME
 
@@ -22,7 +22,7 @@ class Cube:
             logger.info("VCS initialized.")
         else:
             logger.info("VCS is already initialized.")
-        set_head("main")
+        utils.set_head("main")
 
     @staticmethod
     def is_initialized() -> bool:
@@ -40,6 +40,44 @@ class Cube:
         shutil.rmtree(f".{NAME}")
         logger.info(f"VCS reset successful.")
 
+    def _stage_file(filepath: str) -> str:
+        """Converts a file to a blob and stores it in the objects directory"""
+
+        file_hash = utils.hash_file(filepath)
+        # Object path should be <first two chars>/<remaining chars> of the hash
+        object_path = f".{NAME}/objects/{file_hash[:2]}/{file_hash[2:]}"
+
+        if not os.path.exists(object_path):
+            # Create directories to store the object
+            os.makedirs(os.path.dirname(object_path), exist_ok=True)
+            
+            # Read the file content and store it in the repo as a blob
+            with open(filepath, 'rb') as src_file:
+                content = src_file.read()
+            with open(object_path, 'wb') as obj_file:
+                obj_file.write(content)
+            logger.info(f"File '{filepath}' stored at {object_path}.")
+
+            # Stage the file by adding it to the index in the format "<hash> <filepath>"
+            index_filename = f".{NAME}/index"
+            index_entry = f"{file_hash} {filepath}\n"
+            
+            # Read existing index content
+            with open(index_filename, "r") as index_file:
+                lines = index_file.readlines()
+            
+            prev_hash, line_number = utils.is_indexed(lines, filepath)
+            if prev_hash:
+                utils.overwrite_index(index_filename, lines, line_number, index_entry)
+                utils.delete_object(prev_hash)
+            else:
+                with open(index_filename, "a") as index_file:
+                    index_file.write(index_entry)
+        else:
+            logger.info(f"Blob with hash {file_hash} already exists.")
+
+        return file_hash
+
     @staticmethod
     @cli.command()
     @click.argument("filepath")
@@ -51,7 +89,7 @@ class Cube:
             logger.error(f"File '{filepath}' does not exist.")
             return
 
-        stage_file(filepath)
+        Cube._stage_file(filepath)
         logger.info(f"Staged '{filepath}'.")
 
     @staticmethod
@@ -73,7 +111,7 @@ class Cube:
             for entry in staged:
                 file_hash, filepath = entry.strip().split(" ", 1)
                 staged_paths.append(filepath)
-                current_hash = hash_file(filepath) if os.path.isfile(filepath) else None
+                current_hash = utils.hash_file(filepath) if os.path.isfile(filepath) else None
                 file_info = f"{filepath} {file_hash}"
                 if current_hash == file_hash:
                     staged_msg += f"\n\t{file_info}"

@@ -19,28 +19,36 @@ def hash_file(filepath: str) -> str:
             sha.update(chunk)
     return sha.hexdigest()
 
-def stage_file(filepath: str) -> str:
-    """Converts a file to a blob and stores it in the objects directory"""
+def is_indexed(index_file, filepath: str) -> bool:
+    """
+    Checks if a file is already staged.
+    If yes, return the line number (1-based) in the index file.
+    """
+    i = 0
+    for line in index_file:
+        hash, indexed_path = line.strip().split(" ", 1)
+        if indexed_path == filepath:
+            return hash, i
+        i += 1
+    return "", -1
 
-    file_hash = hash_file(filepath)
-    # Object path should be <first two chars>/<remaining chars> of the hash
-    object_path = f".{NAME}/objects/{file_hash[:2]}/{file_hash[2:]}"
+def overwrite_index(filename: str, lines: list, line_number: int, entry: str):
+    """Overwrites the hash of a file in the index"""
+    lines[line_number - 1] = entry
+    with open(filename, "w") as file:
+        file.writelines(lines)
 
-    if not os.path.exists(object_path):
-        # Create directories to store the object
-        os.makedirs(os.path.dirname(object_path), exist_ok=True)
-        
-        # Read the file content and store it in the repo as a blob
-        with open(filepath, 'rb') as src_file:
-            content = src_file.read()
-        with open(object_path, 'wb') as obj_file:
-            obj_file.write(content)
-        logger.info(f"File '{filepath}' stored at {object_path}.")
-
-        # Stage the file by adding it to the index in the format "<hash> <filepath>"
-        with open(f".{NAME}/index", "a") as index_file:
-            index_file.write(f"{file_hash} {filepath}\n")
+def delete_object(object_hash: str):
+    """
+    Deletes an object from the objects directory.
+    If the hash is 'a1b2c3...', it deletes the file at '.cube/objects/a1/b2c3...'
+    """
+    object_path = f".{NAME}/objects/{object_hash[:2]}/{object_hash[2:]}"
+    if os.path.exists(object_path):
+        os.remove(object_path)
+        dir_path = os.path.dirname(object_path)
+        if not os.listdir(dir_path):
+            os.rmdir(dir_path)
+        logger.info(f"Deleted previously staged version: {object_path}.")
     else:
-        logger.info(f"Blob with hash {file_hash} already exists.")
-
-    return file_hash
+        logger.warning(f"Object {object_hash} does not exist at {object_path}.")

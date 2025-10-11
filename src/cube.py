@@ -82,6 +82,29 @@ class Cube:
         logger.info(f"Staged '{filepath}'.")
 
     @staticmethod
+    def _get_ignored_files() -> list:
+        ignore_file = f".{NAME}ignore"
+        ignored_files = []
+        if os.path.isfile(ignore_file):
+            with open(ignore_file, "r") as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith("#"):
+                        ignored_files.append(line)
+        else:
+            logger.info(f"No {NAME}ignore file found!.")
+        return ignored_files
+    
+    @staticmethod
+    def _is_ignored(filepath: str, ignored_files: list) -> bool:
+        if not ignored_files:
+            return False
+        for pattern in ignored_files:
+            if utils.matches_pattern(filepath, pattern):
+                return True
+        return False
+
+    @staticmethod
     @cli.command()
     @error_handler
     def status():
@@ -108,13 +131,16 @@ class Cube:
                     modified_msg += f"\n\t{file_info} -> {current_hash or 'deleted'}"
 
         untracked, untracked_msg = [], ""
+        ignored_files = Cube._get_ignored_files()
         for root, _, files in os.walk("."):
             for file in files:
                 full_path = os.path.relpath(os.path.join(root, file))
                 if full_path.startswith(f".{NAME}/") or full_path in staged_paths:
                     continue
+                if Cube._is_ignored(full_path, ignored_files):
+                    continue
                 untracked.append(full_path)
-        
+
         untracked_msg += "\nUntracked files:"
         for file in untracked:
             untracked_msg += f"\n\t{file}"

@@ -1,5 +1,6 @@
 import os
 from hashlib import sha1
+from fnmatch import fnmatch
 from src.logger import logger
 from src.constants import NAME
 
@@ -73,3 +74,8 @@ def delete_object(object_hash: str):
         logger.info(f"Deleted previously staged version: {object_path}.")
     else:
         logger.warning(f"Object {object_hash} does not exist at {object_path}.")
+
+
+def matches_pattern(filepath: str, pattern: str) -> bool:
+    """Checks if a filepath matches a given pattern (supports '*' wildcard)"""
+    return fnmatch(filepath, pattern)

@@ -5,7 +5,10 @@ import click
 from src.config import cli, error_handler
 from src import utils
 from src.logger import logger
+from src.commit import Tree
 from src.constants import NAME
+
+ROOT = f".{NAME}"
 
 class Cube:
     """Version Control System"""
@@ -14,8 +17,8 @@ class Cube:
     @cli.command(name="init")
     @error_handler
     def __init__():
-        if not os.path.isdir(f".{NAME}"):
-            os.mkdir(f".{NAME}")
+        if not os.path.isdir(ROOT):
+            os.mkdir(ROOT)
             os.mkdir(f".{NAME}/objects")
             open(f".{NAME}/index", "w").close()
             os.makedirs(f".{NAME}/refs/heads")
@@ -26,10 +29,12 @@ class Cube:
 
     @staticmethod
     def is_initialized() -> bool:
-        if not os.path.isdir(f".{NAME}"):
+        try:
+            utils.get_root_path(".")
+            return True
+        except ValueError:
             logger.error("VCS is not initialized. Please run 'init' command first.")
             return False
-        return True
 
     @staticmethod
     @cli.command()
@@ -37,7 +42,7 @@ class Cube:
     def undo():
         if not Cube.is_initialized():
             return
-        shutil.rmtree(f".{NAME}")
+        shutil.rmtree(ROOT)
         logger.info(f"VCS reset successful.")
 
     def _stage_file(filepath: str) -> str:
@@ -105,15 +110,18 @@ class Cube:
         return False
 
     @staticmethod
+    def _get_index():
+        with open(f".{NAME}/index", "r") as index_file:
+            return index_file.readlines()
+
+    @staticmethod
     @cli.command()
     @error_handler
     def status():
         if not Cube.is_initialized():
             return
 
-        with open(f".{NAME}/index", "r") as index_file:
-            staged = index_file.readlines()
-
+        staged = Cube._get_index()
         staged_paths = []
         staged_msg, modified_msg = "", ""
 
@@ -157,3 +165,21 @@ class Cube:
             f"\nHEAD is at {open(f'.{NAME}/HEAD').read().strip()}."
         )
         logger.warning(msg)
+
+    @staticmethod
+    @cli.command()
+    @error_handler
+    def commit():
+        if not Cube.is_initialized():
+            return
+
+        index = Cube._get_index()
+        if not index:
+            logger.info("No files staged for commit.")
+            return
+
+        commit_tree = Tree(".")
+        for entry in index:
+            file_hash, filepath = entry.strip().split(" ", 1)
+            commit_tree.add_subtrees(filepath, file_hash)
+        logger.debug(f"Commit tree: \n{commit_tree}")

@@ -1,7 +1,9 @@
 import os
+import pickle
 from hashlib import sha1
 from fnmatch import fnmatch
 from src.logger import logger
+from src.commit import Tree, Commit
 from src.constants import NAME
 
 
@@ -96,3 +98,22 @@ def get_root_path(path: str) -> bool:
 
     parent_dir = os.path.abspath(os.path.join(directory_name, os.pardir))
     return get_root_path(parent_dir)
+
+
+def store_commit(commit: Commit):
+    """Store a commit object in the objects directory."""
+    to_bytes = pickle.dumps(commit)
+    object_hash = sha1(to_bytes).hexdigest()
+    object_path = get_object_path(object_hash)
+    os.makedirs(os.path.dirname(object_path), exist_ok=True)
+    with open(object_path, 'wb') as obj_file:
+        obj_file.write(to_bytes)
+    logger.info(f"Commit stored at {object_path}.")
+    return object_hash
+
+
+def clear_index():
+    """Clears the index file after a commit."""
+    index_path = f".{NAME}/index"
+    open(index_path, 'w').close()
+    logger.info("Index cleared after commit.")

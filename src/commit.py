@@ -1,5 +1,4 @@
 import os
-from src.logger import logger
 
 class Tree:
     """
@@ -45,3 +44,10 @@ class Tree:
 
         dir.add_subtrees(child_path, hash)
         self.subtrees.append(dir)
+
+class Commit:
+    """Commit object."""
+    def __init__(self, tree: Tree, parent: str = None, message: str = None):
+        self.tree = tree
+        self.parent = parent
+        self.message = message

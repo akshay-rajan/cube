@@ -5,7 +5,7 @@ import click
 from src.config import cli, error_handler
 from src import utils
 from src.logger import logger
-from src.commit import Tree
+from src.commit import Tree, Commit
 from src.constants import NAME
 
 ROOT = f".{NAME}"
@@ -167,6 +167,12 @@ class Cube:
         logger.warning(msg)
 
     @staticmethod
+    def _add_commit(tree, parent=None, message=None):
+        commit = Commit(tree, parent, message)
+        utils.store_commit(commit)
+        utils.clear_index()
+
+    @staticmethod
     @cli.command()
     @error_handler
     def commit():
@@ -183,3 +189,5 @@ class Cube:
             file_hash, filepath = entry.strip().split(" ", 1)
             commit_tree.add_subtrees(filepath, file_hash)
         logger.debug(f"Commit tree: \n{commit_tree}")
+
+        Cube._add_commit(commit_tree)

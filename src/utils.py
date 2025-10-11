@@ -79,3 +79,20 @@ def delete_object(object_hash: str):
 def matches_pattern(filepath: str, pattern: str) -> bool:
     """Checks if a filepath matches a given pattern (supports '*' wildcard)"""
     return fnmatch(filepath, pattern)
+
+
+def get_root_path(path: str) -> bool:
+    """Checks if the given filepath is at the root of the repository."""
+    directory_name = os.path.dirname(path)
+    system_root_dir = os.path.abspath(os.sep)
+    error = ValueError("The directory is not version controlled!")
+    if directory_name == system_root_dir:
+        raise error
+
+    vcs_dir_name = f".{NAME}"
+    for dir in os.listdir(path):
+        if dir == vcs_dir_name:
+            return os.path.abspath(path)
+
+    parent_dir = os.path.abspath(os.path.join(directory_name, os.pardir))
+    return get_root_path(parent_dir)

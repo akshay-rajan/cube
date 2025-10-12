@@ -1,5 +1,6 @@
 # Files to ignore
 .git/*
+.cube/*
 src/*
 README.md
 main.py

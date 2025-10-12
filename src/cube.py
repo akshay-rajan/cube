@@ -10,6 +10,7 @@ from src.constants import NAME
 
 ROOT = f".{NAME}"
 
+
 class Cube:
     """Version Control System"""
 
@@ -84,6 +85,21 @@ class Cube:
     def _stage_file(filepath: str) -> str:
         """Converts a file to a blob and stores it in the objects directory"""
 
+        ignored_files = Cube._get_ignored_files()
+        if Cube._is_ignored(filepath, ignored_files):
+            logger.info(f"File '{filepath}' is ignored.")
+            return
+
+        if os.path.isdir(filepath):
+            for root, _, files in os.walk(filepath):
+                for file in files:
+                    full_path = os.path.relpath(os.path.join(root, file))
+                    if Cube._is_ignored(full_path, ignored_files):
+                        continue
+                    if os.path.isdir(full_path) or os.path.isfile(full_path):
+                        Cube._stage_file(full_path)
+            return
+
         file_hash = utils.hash_file(filepath)
         object_path = utils.get_object_path(file_hash)
 
@@ -115,12 +131,13 @@ class Cube:
     def add(filepath: str):
         if not Cube.is_initialized():
             return
-        if not os.path.isfile(filepath):
-            logger.error(f"File '{filepath}' does not exist.")
+
+        if not os.path.isfile(filepath) and not os.path.isdir(filepath):
+            logger.error(f"File or directory '{filepath}' does not exist.")
             return
 
         Cube._stage_file(filepath)
-        logger.info(f"Staged '{filepath}'.")
+        logger.info("Staged.")
 
     @staticmethod
     def _get_ignored_files() -> list:
@@ -175,6 +192,7 @@ class Cube:
         commit_hash = utils.get_head_commit()
         if commit_hash:
             commit = Cube._get_commit(commit_hash)
+            logger.debug(f"Last commit tree:\n{commit.tree}\n")
 
         if not staged:
             logger.info("No files staged.")
@@ -266,7 +284,12 @@ class Cube:
     def switch(branch: str):
         if not Cube.is_initialized():
             return
-        
+
+        current_branch = utils.get_current_branch()
+        if branch == current_branch:
+            logger.info(f"Already on branch '{branch}'.")
+            return
+
         branch_path = f".{NAME}/refs/heads/{branch}"
         if not os.path.isfile(branch_path):
             logger.error(f"Branch '{branch}' does not exist!")

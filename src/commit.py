@@ -1,4 +1,7 @@
 import os
+import pickle
+from src import utils
+
 
 class Tree:
     """
@@ -51,3 +54,24 @@ class Commit:
         self.tree = tree
         self.parent = parent
         self.message = message
+
+    def __str__(self):
+        parent_str = self.parent if self.parent else "None"
+        return (
+            f"COMMIT (Parent: {parent_str}, Message: {self.message})\n"
+            f"{self.tree}\n"
+        )
+    
+    @staticmethod
+    def from_bytes(data: bytes):
+        return pickle.loads(data)
+
+    def get_parent(self):
+        parent_hash = self.parent
+        if not parent_hash:
+            return None
+        with open(utils.get_object_path(parent_hash), 'rb') as f:
+            data = f.read()
+            self.parent = Commit.from_bytes(data)
+            return self.parent
+    

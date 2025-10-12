@@ -149,6 +149,17 @@ class Cube:
     def _get_index():
         with open(f".{NAME}/index", "r") as index_file:
             return index_file.readlines()
+        
+    @staticmethod
+    def _get_commit(hash) -> Commit:
+        commit_path = utils.get_object_path(hash)
+        if not os.path.isfile(commit_path):
+            logger.error(f"Commit with hash {hash} does not exist.")
+            return None
+        
+        with open(commit_path, "rb") as commit_file:
+            commit = Commit.from_bytes(commit_file.read())
+            return commit
 
     @staticmethod
     @cli.command()
@@ -160,6 +171,10 @@ class Cube:
         staged = Cube._get_index()
         staged_paths = []
         staged_msg, modified_msg = "", ""
+
+        commit_hash = utils.get_head_commit()
+        if commit_hash:
+            commit = Cube._get_commit(commit_hash)
 
         if not staged:
             logger.info("No files staged.")
@@ -176,12 +191,17 @@ class Cube:
 
         untracked, untracked_msg = [], ""
         ignored_files = Cube._get_ignored_files()
-        for root, _, files in os.walk("."):
+        root_path = utils.get_root_path(".")
+        for root, _, files in os.walk(root_path):
             for file in files:
                 full_path = os.path.relpath(os.path.join(root, file))
+                file_hash = utils.hash_file(full_path)
+                object_path = utils.get_object_path(file_hash)
                 if full_path.startswith(f".{NAME}/") or full_path in staged_paths:
                     continue
                 if Cube._is_ignored(full_path, ignored_files):
+                    continue
+                if os.path.isfile(object_path):
                     continue
                 untracked.append(full_path)
 
@@ -205,8 +225,15 @@ class Cube:
     @staticmethod
     def _add_commit(tree, parent=None, message=None):
         commit = Commit(tree, parent, message)
-        utils.store_commit(commit)
+        hash = utils.store_commit(commit)
+        
+        branch_name = utils.get_current_branch()
+        branch_path = f".{NAME}/refs/heads/{branch_name}"
+        with open(branch_path, "w") as branch_file:
+            branch_file.write(hash)
+
         utils.clear_index()
+        logger.info(f"Committed to branch '{branch_name}' with hash {hash}.")
 
     @staticmethod
     @cli.command()

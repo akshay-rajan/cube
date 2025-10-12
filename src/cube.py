@@ -258,3 +258,17 @@ class Cube:
 
         parent_commit_hash = utils.get_head_commit()
         Cube._add_commit(commit_tree, parent_commit_hash, message)
+
+    @staticmethod
+    @cli.command()
+    @click.argument("branch")
+    @error_handler
+    def switch(branch: str):
+        if not Cube.is_initialized():
+            return
+        
+        branch_path = f".{NAME}/refs/heads/{branch}"
+        if not os.path.isfile(branch_path):
+            logger.error(f"Branch '{branch}' does not exist!")
+            return
+        utils.set_head(branch)

@@ -3,7 +3,7 @@ import pickle
 from hashlib import sha1
 from fnmatch import fnmatch
 from src.logger import logger
-from src.commit import Tree, Commit
+from src.objects import Commit
 from src.constants import NAME
 
 

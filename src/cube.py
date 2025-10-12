@@ -5,7 +5,7 @@ import click
 from src.config import cli, error_handler
 from src import utils
 from src.logger import logger
-from src.commit import Tree, Commit
+from src.objects import Tree, Commit
 from src.constants import NAME
 
 ROOT = f".{NAME}"

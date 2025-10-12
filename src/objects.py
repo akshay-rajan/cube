@@ -48,6 +48,7 @@ class Tree:
         dir.add_subtrees(child_path, hash)
         self.subtrees.append(dir)
 
+
 class Commit:
     """Commit object."""
     def __init__(self, tree: Tree, parent: str = None, message: str = None):

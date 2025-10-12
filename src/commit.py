@@ -65,13 +65,15 @@ class Commit:
     @staticmethod
     def from_bytes(data: bytes):
         return pickle.loads(data)
+    
+    @staticmethod
+    def from_hash(hash: str):
+        object_path = utils.get_object_path(hash)
+        with open(object_path, 'rb') as f:
+            data = f.read()
+            return Commit.from_bytes(data)
 
     def get_parent(self):
-        parent_hash = self.parent
-        if not parent_hash:
+        if not self.parent:
             return None
-        with open(utils.get_object_path(parent_hash), 'rb') as f:
-            data = f.read()
-            self.parent = Commit.from_bytes(data)
-            return self.parent
-    
+        return Commit.from_hash(self.parent)

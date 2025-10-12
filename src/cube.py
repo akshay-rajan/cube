@@ -20,9 +20,9 @@ class Cube:
     def __init__():
         if not os.path.isdir(ROOT):
             os.mkdir(ROOT)
-            os.mkdir(f".{NAME}/objects")
-            open(f".{NAME}/index", "w").close()
-            os.makedirs(f".{NAME}/refs/heads")
+            os.mkdir(f"{ROOT}/objects")
+            open(f"{ROOT}/index", "w").close()
+            os.makedirs(f"{ROOT}/refs/heads")
             Cube._create_branch("main")
             utils.set_head("main")
             logger.info("VCS initialized.")
@@ -31,7 +31,7 @@ class Cube:
 
     @staticmethod
     def _list_branches() -> list:
-        branches = os.listdir(f".{NAME}/refs/heads")
+        branches = os.listdir(f"{ROOT}/refs/heads")
         current_branch = utils.get_current_branch()
         for branch in branches:
             if branch == current_branch:
@@ -41,7 +41,7 @@ class Cube:
 
     @staticmethod
     def _create_branch(branch_name: str):
-        branch_path = f".{NAME}/refs/heads/{branch_name}"
+        branch_path = f"{ROOT}/refs/heads/{branch_name}"
         if os.path.isfile(branch_path):
             logger.error(f"Branch '{branch_name}' already exists.")
             return
@@ -106,7 +106,7 @@ class Cube:
         if not os.path.exists(object_path):
             utils.add_object(file_hash, filepath)
 
-            index_filename = f".{NAME}/index"
+            index_filename = f"{ROOT}/index"
             index_entry = f"{file_hash} {filepath}\n"
             
             with open(index_filename, "r") as index_file:
@@ -141,7 +141,7 @@ class Cube:
 
     @staticmethod
     def _get_ignored_files() -> list:
-        ignore_file = f".{NAME}ignore"
+        ignore_file = f"{ROOT}ignore"
         ignored_files = []
         if os.path.isfile(ignore_file):
             with open(ignore_file, "r") as f:
@@ -164,7 +164,7 @@ class Cube:
 
     @staticmethod
     def _get_index():
-        with open(f".{NAME}/index", "r") as index_file:
+        with open(f"{ROOT}/index", "r") as index_file:
             return index_file.readlines()
         
     @staticmethod
@@ -215,7 +215,7 @@ class Cube:
                 full_path = os.path.relpath(os.path.join(root, file))
                 file_hash = utils.hash_file(full_path)
                 object_path = utils.get_object_path(file_hash)
-                if full_path.startswith(f".{NAME}/") or full_path in staged_paths:
+                if full_path.startswith(f"{ROOT}/") or full_path in staged_paths:
                     continue
                 if Cube._is_ignored(full_path, ignored_files):
                     continue
@@ -236,7 +236,7 @@ class Cube:
 
         msg = (
             f"\nTotal {len(staged)} file(s) staged."
-            f"\nHEAD is at {open(f'.{NAME}/HEAD').read().strip()}."
+            f"\nHEAD is at {open(f'{ROOT}/HEAD').read().strip()}."
         )
         logger.warning(msg)
 
@@ -246,7 +246,7 @@ class Cube:
         hash = utils.store_commit(commit)
         
         branch_name = utils.get_current_branch()
-        branch_path = f".{NAME}/refs/heads/{branch_name}"
+        branch_path = f"{ROOT}/refs/heads/{branch_name}"
         with open(branch_path, "w") as branch_file:
             branch_file.write(hash)
 
@@ -290,8 +290,33 @@ class Cube:
             logger.info(f"Already on branch '{branch}'.")
             return
 
-        branch_path = f".{NAME}/refs/heads/{branch}"
+        branch_path = f"{ROOT}/refs/heads/{branch}"
         if not os.path.isfile(branch_path):
             logger.error(f"Branch '{branch}' does not exist!")
             return
         utils.set_head(branch)
+
+    @staticmethod
+    def _log_helper(commit: Commit, hash: str):
+        if not commit:
+            return
+        
+        logger.warning(hash)
+        logger.info(commit)
+
+        Cube._log_helper(commit.get_parent(), commit.parent)
+
+    @staticmethod
+    @cli.command()
+    @error_handler
+    def log():
+        if not Cube.is_initialized():
+            return
+        
+        current_commit_hash = utils.get_head_commit()
+        if not current_commit_hash:
+            logger.info("No commits yet!")
+            return
+        
+        commit = Commit.from_hash(current_commit_hash)
+        Cube._log_helper(commit, current_commit_hash)

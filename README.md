@@ -12,7 +12,8 @@ A version controller in `python` built to understand deeply about `git` and vers
 6. List all branches with `python3 main.py branch`.
 7. Checkout to another branch using `python3 main.py switch [branchname]`. (*Only changes the reference*)
 8. Use `.cubeignore` to skip files from version controlling.
-9. Remove version controlling from the repo using `python3 main.py undo`.
+9. Get commit logs by running `python3 main.py log`.
+10. Remove version controlling from the repo using `python3 main.py undo`.
 
 ---
 

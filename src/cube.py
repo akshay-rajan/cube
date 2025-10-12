@@ -22,10 +22,46 @@ class Cube:
             os.mkdir(f".{NAME}/objects")
             open(f".{NAME}/index", "w").close()
             os.makedirs(f".{NAME}/refs/heads")
+            Cube._create_branch("main")
+            utils.set_head("main")
             logger.info("VCS initialized.")
         else:
             logger.info("VCS is already initialized.")
-        utils.set_head("main")
+
+    @staticmethod
+    def _list_branches() -> list:
+        branches = os.listdir(f".{NAME}/refs/heads")
+        current_branch = utils.get_current_branch()
+        for branch in branches:
+            if branch == current_branch:
+                logger.debug(f"* {branch}")
+            else:
+                logger.info(f"  {branch}")
+
+    @staticmethod
+    def _create_branch(branch_name: str):
+        branch_path = f".{NAME}/refs/heads/{branch_name}"
+        if os.path.isfile(branch_path):
+            logger.error(f"Branch '{branch_name}' already exists.")
+            return
+        
+        current_commit = utils.get_head_commit()
+        with open(branch_path, "w") as branch_file:
+            branch_file.write(current_commit or "")
+
+        logger.info(f"Branch '{branch_name}' created.")
+
+    @staticmethod
+    @cli.command()
+    @click.argument("branch_name", required=False)
+    def branch(branch_name: str = None):
+        if not Cube.is_initialized():
+            return
+
+        if not branch_name:
+            Cube._list_branches()
+        else:        
+            Cube._create_branch(branch_name)
 
     @staticmethod
     def is_initialized() -> bool:
@@ -174,8 +210,11 @@ class Cube:
 
     @staticmethod
     @cli.command()
+    @click.option(
+        '--message', '-m', prompt='message', help='Commit message.'
+    )
     @error_handler
-    def commit():
+    def commit(message: str):
         if not Cube.is_initialized():
             return
 
@@ -190,4 +229,5 @@ class Cube:
             commit_tree.add_subtrees(filepath, file_hash)
         logger.debug(f"Commit tree: \n{commit_tree}")
 
-        Cube._add_commit(commit_tree)
+        parent_commit_hash = utils.get_head_commit()
+        Cube._add_commit(commit_tree, parent_commit_hash, message)

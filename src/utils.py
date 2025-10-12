@@ -117,3 +117,32 @@ def clear_index():
     index_path = f".{NAME}/index"
     open(index_path, 'w').close()
     logger.info("Index cleared after commit.")
+
+
+def get_current_branch() -> str:
+    """Returns the current branch name from HEAD"""
+    with open(f".{NAME}/HEAD", "r") as file:
+        ref = file.read().strip()
+    if ref.startswith("refs/heads/"):
+        return ref[len("refs/heads/"):]
+    raise ValueError("HEAD is in a detached state.")
+
+
+def get_head_commit() -> str:
+    """Returns the commit hash that HEAD points to"""
+    try:
+        with open(f".{NAME}/HEAD", "r") as file:
+            ref = file.read().strip()
+    except FileNotFoundError:
+        return None
+
+    if ref.startswith("refs/heads/"):
+        branch = ref[len("refs/heads/"):]
+        branch_path = f".{NAME}/refs/heads/{branch}"
+        if os.path.isfile(branch_path):
+            with open(branch_path, "r") as branch_file:
+                commit_hash = branch_file.read().strip()
+                return commit_hash if commit_hash else None
+        else:
+            raise ValueError(f"Branch '{branch}' does not exist.")
+    raise ValueError("HEAD is in a detached state.")

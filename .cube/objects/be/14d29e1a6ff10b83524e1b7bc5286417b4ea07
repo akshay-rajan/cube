@@ -1,0 +1,8 @@
+# Files to ignore
+.git/*
+.cube/*
+src/*
+README.md
+main.py
+.gitignore
+__init__.py

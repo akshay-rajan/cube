@@ -3,7 +3,7 @@ import pickle
 from hashlib import sha1
 from fnmatch import fnmatch
 from src.logger import logger
-from src.objects import Commit
+from src.objects import Commit, Index
 from src.constants import NAME
 
 
@@ -54,7 +54,7 @@ def overwrite_index(filename: str, lines: list, line_number: int, entry: str):
 def add_object(file_hash: str, filepath: str):
     object_path = get_object_path(file_hash)
     os.makedirs(os.path.dirname(object_path), exist_ok=True)
-            
+
     with open(filepath, 'rb') as src_file:
         content = src_file.read()
     with open(object_path, 'wb') as obj_file:
@@ -111,11 +111,16 @@ def store_commit(commit: Commit):
     logger.info(f"Commit stored at {object_path}.")
     return object_hash
 
+def store_index(index: Index) -> str:
+    """Store an index object in the objects directory."""
+    to_bytes = pickle.dumps(index)
+    with open(Index.path, 'wb') as obj_file:
+        obj_file.write(to_bytes)
+    logger.info("Index updated.")
 
 def clear_index():
     """Clears the index file after a commit."""
-    index_path = f".{NAME}/index"
-    open(index_path, 'w').close()
+    open(Index.path, 'w').close()
     logger.info("Index cleared after commit.")
 
 
@@ -128,7 +133,7 @@ def get_current_branch() -> str:
     raise ValueError("HEAD is in a detached state.")
 
 
-def get_head_commit() -> str:
+def get_head_commit_hash() -> str:
     """Returns the commit hash that HEAD points to"""
     try:
         with open(f".{NAME}/HEAD", "r") as file:

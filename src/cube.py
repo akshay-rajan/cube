@@ -5,7 +5,7 @@ import click
 from src.config import cli, error_handler
 from src import utils
 from src.logger import logger
-from src.objects import Tree, Commit
+from src.objects import Tree, Commit, Index
 from src.constants import NAME
 
 ROOT = f".{NAME}"
@@ -21,13 +21,21 @@ class Cube:
         if not os.path.isdir(ROOT):
             os.mkdir(ROOT)
             os.mkdir(f"{ROOT}/objects")
-            open(f"{ROOT}/index", "w").close()
-            os.makedirs(f"{ROOT}/refs/heads")
+            Index()
             Cube._create_branch("main")
             utils.set_head("main")
             logger.info("VCS initialized.")
         else:
             logger.info("VCS is already initialized.")
+
+    @staticmethod
+    def _is_initialized() -> bool:
+        try:
+            utils.get_root_path(".")
+            return True
+        except ValueError:
+            logger.error("VCS is not initialized. Please run 'init' command first.")
+            return False
 
     @staticmethod
     def _list_branches() -> list:
@@ -46,7 +54,8 @@ class Cube:
             logger.error(f"Branch '{branch_name}' already exists.")
             return
         
-        current_commit = utils.get_head_commit()
+        os.makedirs(os.path.dirname(branch_path), exist_ok=True)
+        current_commit = utils.get_head_commit_hash()
         with open(branch_path, "w") as branch_file:
             branch_file.write(current_commit or "")
 
@@ -56,7 +65,7 @@ class Cube:
     @cli.command()
     @click.argument("branch_name", required=False)
     def branch(branch_name: str = None):
-        if not Cube.is_initialized():
+        if not Cube._is_initialized():
             return
 
         if not branch_name:
@@ -64,20 +73,12 @@ class Cube:
         else:        
             Cube._create_branch(branch_name)
 
-    @staticmethod
-    def is_initialized() -> bool:
-        try:
-            utils.get_root_path(".")
-            return True
-        except ValueError:
-            logger.error("VCS is not initialized. Please run 'init' command first.")
-            return False
 
     @staticmethod
     @cli.command()
     @error_handler
     def undo():
-        if not Cube.is_initialized():
+        if not Cube._is_initialized():
             return
         shutil.rmtree(ROOT)
         logger.info(f"VCS reset successful.")
@@ -85,6 +86,7 @@ class Cube:
     def _stage_file(filepath: str) -> str:
         """Converts a file to a blob and stores it in the objects directory"""
 
+        index = Index(from_file=True)
         ignored_files = Cube._get_ignored_files()
         if Cube._is_ignored(filepath, ignored_files):
             logger.info(f"File '{filepath}' is ignored.")
@@ -102,23 +104,9 @@ class Cube:
 
         file_hash = utils.hash_file(filepath)
         object_path = utils.get_object_path(file_hash)
-
         if not os.path.exists(object_path):
             utils.add_object(file_hash, filepath)
-
-            index_filename = f"{ROOT}/index"
-            index_entry = f"{file_hash} {filepath}\n"
-            
-            with open(index_filename, "r") as index_file:
-                lines = index_file.readlines()
-            
-            prev_hash, line_number = utils.is_indexed(lines, filepath)
-            if prev_hash:
-                utils.overwrite_index(index_filename, lines, line_number, index_entry)
-                utils.delete_object(prev_hash)
-            else:
-                with open(index_filename, "a") as index_file:
-                    index_file.write(index_entry)
+            index.overwrite(filepath)
         else:
             logger.info(f"Blob with hash {file_hash} already exists.")
 
@@ -129,7 +117,7 @@ class Cube:
     @click.argument("filepath")
     @error_handler
     def add(filepath: str):
-        if not Cube.is_initialized():
+        if not Cube._is_initialized():
             return
 
         if not os.path.isfile(filepath) and not os.path.isdir(filepath):
@@ -182,14 +170,14 @@ class Cube:
     @cli.command()
     @error_handler
     def status():
-        if not Cube.is_initialized():
+        if not Cube._is_initialized():
             return
 
         staged = Cube._get_index()
         staged_paths = []
         staged_msg, modified_msg = "", ""
 
-        commit_hash = utils.get_head_commit()
+        commit_hash = utils.get_head_commit_hash()
         if commit_hash:
             commit = Cube._get_commit(commit_hash)
             logger.debug(f"Last commit tree:\n{commit.tree}\n")
@@ -260,7 +248,7 @@ class Cube:
     )
     @error_handler
     def commit(message: str):
-        if not Cube.is_initialized():
+        if not Cube._is_initialized():
             return
 
         index = Cube._get_index()
@@ -274,7 +262,7 @@ class Cube:
             commit_tree.add_subtrees(filepath, file_hash)
         logger.debug(f"Commit tree: \n{commit_tree}")
 
-        parent_commit_hash = utils.get_head_commit()
+        parent_commit_hash = utils.get_head_commit_hash()
         Cube._add_commit(commit_tree, parent_commit_hash, message)
 
     @staticmethod
@@ -282,7 +270,7 @@ class Cube:
     @click.argument("branch")
     @error_handler
     def switch(branch: str):
-        if not Cube.is_initialized():
+        if not Cube._is_initialized():
             return
 
         current_branch = utils.get_current_branch()
@@ -310,10 +298,10 @@ class Cube:
     @cli.command()
     @error_handler
     def log():
-        if not Cube.is_initialized():
+        if not Cube._is_initialized():
             return
         
-        current_commit_hash = utils.get_head_commit()
+        current_commit_hash = utils.get_head_commit_hash()
         if not current_commit_hash:
             logger.info("No commits yet!")
             return

@@ -1,12 +1,62 @@
 import os
 import pickle
+from src.constants import NAME
 from src import utils
+
+
+class Index:
+    """Index object to track files staged for commit."""
+
+    path = f".{NAME}/index"
+
+    def __init__(self, from_file=True):
+        if from_file and os.path.isfile(self.path):
+            with open(self.path, 'rb') as f:
+                data = f.read()
+                loaded_index = pickle.loads(data)
+                self.entries = loaded_index.entries
+        else:
+            os.makedirs(os.path.dirname(self.path), exist_ok=True)
+            self.entries = {}
+            self._store()
+
+    def _store(self):
+        data =  pickle.dumps(self)
+        with open(self.path, 'wb') as f:
+            f.write(data)
+
+    def add(self, path: str, hash: str) -> None:
+        self.entries[path] = hash
+        self._store()
+
+    def _contains(self, path: str) -> bool:
+        return path in self.entries
+
+    def remove(self, path: str) -> None:
+        if self._contains(path):
+            hash = self.entries[path]
+            del self.entries[path]
+            utils.delete_object(hash)
+            self._store()
+
+    def overwrite(self, path: str, hash: str) -> None:
+        if self._contains(path):
+            old_hash = self.entries[path]
+            utils.delete_object(old_hash)
+        self.entries[path] = hash
+        self._store()
+
+    def clear(self) -> None:
+        self.entries.clear()
+        self._store()
+
+    def list_entries(self):
+        return self.entries.items()
 
 
 class Tree:
     """
-    Commit tree.
-    A tree with subtrees represents a directory, meanwhile one without a child is a file.
+    A tree with subtrees represents a directory, meanwhile one without a subtree is a file.
     """
     def __init__(self, name:str, hash=None) -> None:
         self.name = name

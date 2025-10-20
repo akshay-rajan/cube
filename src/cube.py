@@ -11,7 +11,7 @@ from src.constants import NAME
 ROOT = f".{NAME}"
 
 
-class Cube:
+class VCS:
     """Version Control System"""
 
     @staticmethod
@@ -22,7 +22,7 @@ class Cube:
             os.mkdir(ROOT)
             os.mkdir(f"{ROOT}/objects")
             Index()
-            Cube._create_branch("main")
+            VCS._create_branch("main")
             utils.set_head("main")
             logger.info("VCS initialized.")
         else:
@@ -65,20 +65,19 @@ class Cube:
     @cli.command()
     @click.argument("branch_name", required=False)
     def branch(branch_name: str = None):
-        if not Cube._is_initialized():
+        if not VCS._is_initialized():
             return
 
         if not branch_name:
-            Cube._list_branches()
+            VCS._list_branches()
         else:        
-            Cube._create_branch(branch_name)
-
+            VCS._create_branch(branch_name)
 
     @staticmethod
     @cli.command()
     @error_handler
     def undo():
-        if not Cube._is_initialized():
+        if not VCS._is_initialized():
             return
         shutil.rmtree(ROOT)
         logger.info(f"VCS reset successful.")
@@ -87,8 +86,8 @@ class Cube:
         """Converts a file to a blob and stores it in the objects directory"""
 
         index = Index(from_file=True)
-        ignored_files = Cube._get_ignored_files()
-        if Cube._is_ignored(filepath, ignored_files):
+        ignored_files = VCS._get_ignored_files()
+        if VCS._is_ignored(filepath, ignored_files):
             logger.info(f"File '{filepath}' is ignored.")
             return
 
@@ -96,10 +95,10 @@ class Cube:
             for root, _, files in os.walk(filepath):
                 for file in files:
                     full_path = os.path.relpath(os.path.join(root, file))
-                    if Cube._is_ignored(full_path, ignored_files):
+                    if VCS._is_ignored(full_path, ignored_files):
                         continue
                     if os.path.isdir(full_path) or os.path.isfile(full_path):
-                        Cube._stage_file(full_path)
+                        VCS._stage_file(full_path)
             return
 
         file_hash = utils.hash_file(filepath)
@@ -117,14 +116,14 @@ class Cube:
     @click.argument("filepath")
     @error_handler
     def add(filepath: str):
-        if not Cube._is_initialized():
+        if not VCS._is_initialized():
             return
 
         if not os.path.isfile(filepath) and not os.path.isdir(filepath):
             logger.error(f"File or directory '{filepath}' does not exist.")
             return
 
-        Cube._stage_file(filepath)
+        VCS._stage_file(filepath)
         logger.info("Staged.")
 
     @staticmethod
@@ -151,11 +150,6 @@ class Cube:
         return False
 
     @staticmethod
-    def _get_index():
-        with open(f"{ROOT}/index", "r") as index_file:
-            return index_file.readlines()
-        
-    @staticmethod
     def _get_commit(hash) -> Commit:
         commit_path = utils.get_object_path(hash)
         if not os.path.isfile(commit_path):
@@ -170,16 +164,17 @@ class Cube:
     @cli.command()
     @error_handler
     def status():
-        if not Cube._is_initialized():
+        if not VCS._is_initialized():
             return
 
-        staged = Cube._get_index()
+        index = Index(from_file=True)
+        staged = index.list_entries()
         staged_paths = []
         staged_msg, modified_msg = "", ""
 
         commit_hash = utils.get_head_commit_hash()
         if commit_hash:
-            commit = Cube._get_commit(commit_hash)
+            commit = VCS._get_commit(commit_hash)
             logger.debug(f"Last commit tree:\n{commit.tree}\n")
 
         if not staged:
@@ -196,7 +191,7 @@ class Cube:
                     modified_msg += f"\n\t{file_info} -> {current_hash or 'deleted'}"
 
         untracked, untracked_msg = [], ""
-        ignored_files = Cube._get_ignored_files()
+        ignored_files = VCS._get_ignored_files()
         root_path = utils.get_root_path(".")
         for root, _, files in os.walk(root_path):
             for file in files:
@@ -205,7 +200,7 @@ class Cube:
                 object_path = utils.get_object_path(file_hash)
                 if full_path.startswith(f"{ROOT}/") or full_path in staged_paths:
                     continue
-                if Cube._is_ignored(full_path, ignored_files):
+                if VCS._is_ignored(full_path, ignored_files):
                     continue
                 if os.path.isfile(object_path):
                     continue
@@ -238,7 +233,6 @@ class Cube:
         with open(branch_path, "w") as branch_file:
             branch_file.write(hash)
 
-        utils.clear_index()
         logger.info(f"Committed to branch '{branch_name}' with hash {hash}.")
 
     @staticmethod
@@ -248,29 +242,30 @@ class Cube:
     )
     @error_handler
     def commit(message: str):
-        if not Cube._is_initialized():
+        if not VCS._is_initialized():
             return
 
-        index = Cube._get_index()
-        if not index:
+        index = Index(from_file=True)
+        index_entries = index.list_entries()
+        if not index_entries:
             logger.info("No files staged for commit.")
             return
 
         commit_tree = Tree(".")
-        for entry in index:
-            file_hash, filepath = entry.strip().split(" ", 1)
+        for filepath, file_hash in index_entries:
             commit_tree.add_subtrees(filepath, file_hash)
         logger.debug(f"Commit tree: \n{commit_tree}")
 
         parent_commit_hash = utils.get_head_commit_hash()
-        Cube._add_commit(commit_tree, parent_commit_hash, message)
+        VCS._add_commit(commit_tree, parent_commit_hash, message)
+        index.clear()
 
     @staticmethod
     @cli.command()
     @click.argument("branch")
     @error_handler
     def switch(branch: str):
-        if not Cube._is_initialized():
+        if not VCS._is_initialized():
             return
 
         current_branch = utils.get_current_branch()
@@ -292,13 +287,13 @@ class Cube:
         logger.warning(hash)
         logger.info(commit)
 
-        Cube._log_helper(commit.get_parent(), commit.parent)
+        VCS._log_helper(commit.get_parent(), commit.parent)
 
     @staticmethod
     @cli.command()
     @error_handler
     def log():
-        if not Cube._is_initialized():
+        if not VCS._is_initialized():
             return
         
         current_commit_hash = utils.get_head_commit_hash()
@@ -307,4 +302,4 @@ class Cube:
             return
         
         commit = Commit.from_hash(current_commit_hash)
-        Cube._log_helper(commit, current_commit_hash)
+        VCS._log_helper(commit, current_commit_hash)

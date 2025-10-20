@@ -118,12 +118,6 @@ def store_index(index: Index) -> str:
         obj_file.write(to_bytes)
     logger.info("Index updated.")
 
-def clear_index():
-    """Clears the index file after a commit."""
-    open(Index.path, 'w').close()
-    logger.info("Index cleared after commit.")
-
-
 def get_current_branch() -> str:
     """Returns the current branch name from HEAD"""
     with open(f".{NAME}/HEAD", "r") as file:

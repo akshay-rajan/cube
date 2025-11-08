@@ -152,3 +152,10 @@ def update_branch_pointer(branch_name, commit_hash):
     os.makedirs(os.path.dirname(branch_path), exist_ok=True)
     with open(branch_path, "w") as branch_file:
         branch_file.write(hash)
+
+def branch_exists(branch_name: str):
+    """Returns True if the branch already exists, False otherwise"""
+    branch_path = f".{NAME}/refs/heads/{branch_name}"
+    if os.path.isfile(branch_path):
+        return True
+    return False

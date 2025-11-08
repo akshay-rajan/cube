@@ -49,11 +49,10 @@ class VCS:
 
     @staticmethod
     def _create_branch(branch_name: str):
-        branch_path = f"{ROOT}/refs/heads/{branch_name}"
-        if os.path.isfile(branch_path):
+        if utils.branch_exists(branch_name):
             logger.error(f"Branch '{branch_name}' already exists.")
             return
-        
+
         current_commit = utils.get_head_commit_hash() or ""
         utils.update_branch_pointer(branch_name, current_commit)
         logger.info(f"Branch '{branch_name}' created.")
@@ -267,8 +266,7 @@ class VCS:
             logger.info(f"Already on branch '{branch}'.")
             return
 
-        branch_path = f"{ROOT}/refs/heads/{branch}"
-        if not os.path.isfile(branch_path):
+        if not utils.branch_exists(branch):
             logger.error(f"Branch '{branch}' does not exist!")
             return
         utils.set_head(branch)

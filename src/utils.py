@@ -145,3 +145,10 @@ def get_head_commit_hash() -> str:
         else:
             raise ValueError(f"Branch '{branch}' does not exist.")
     raise ValueError("HEAD is in a detached state.")
+
+def update_branch_pointer(branch_name, commit_hash):
+    """Update a branch to point to a new commit"""
+    branch_path = f".{NAME}/refs/heads/{branch_name}"
+    os.makedirs(os.path.dirname(branch_path), exist_ok=True)
+    with open(branch_path, "w") as branch_file:
+        branch_file.write(hash)

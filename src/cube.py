@@ -54,11 +54,8 @@ class VCS:
             logger.error(f"Branch '{branch_name}' already exists.")
             return
         
-        os.makedirs(os.path.dirname(branch_path), exist_ok=True)
-        current_commit = utils.get_head_commit_hash()
-        with open(branch_path, "w") as branch_file:
-            branch_file.write(current_commit or "")
-
+        current_commit = utils.get_head_commit_hash() or ""
+        utils.update_branch_pointer(branch_name, current_commit)
         logger.info(f"Branch '{branch_name}' created.")
 
     @staticmethod
@@ -229,10 +226,7 @@ class VCS:
         hash = utils.store_commit(commit)
         
         branch_name = utils.get_current_branch()
-        branch_path = f"{ROOT}/refs/heads/{branch_name}"
-        with open(branch_path, "w") as branch_file:
-            branch_file.write(hash)
-
+        utils.update_branch_pointer(branch_name, hash)
         logger.info(f"Committed to branch '{branch_name}' with hash {hash}.")
 
     @staticmethod

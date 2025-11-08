@@ -2,10 +2,39 @@ import os
 import pickle
 from hashlib import sha1
 from fnmatch import fnmatch
+from functools import wraps
 from src.logger import logger
 from src.objects import Commit, Index
 from src.constants import NAME
 
+
+def get_root_path(path: str) -> bool:
+    """Checks if the given filepath is at the root of the repository."""
+    directory_name = os.path.dirname(path)
+    system_root_dir = os.path.abspath(os.sep)
+    error = ValueError("The directory is not version controlled!")
+    if directory_name == system_root_dir:
+        raise error
+
+    vcs_dir_name = f".{NAME}"
+    for dir in os.listdir(path):
+        if dir == vcs_dir_name:
+            return os.path.abspath(path)
+
+    parent_dir = os.path.abspath(os.path.join(directory_name, os.pardir))
+    return get_root_path(parent_dir)
+
+def initialization_required(func):
+    """Decorator to check if the VCS is already initialized, else raises ValueError"""
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            get_root_path(".")
+        except ValueError:
+            logger.error("VCS is not initialized. Please run 'init' command first.")
+            return False
+        return func(*args, **kwargs)
+    return wrapper
 
 def set_head(branch: str):
     """Sets the head to point to a branch"""
@@ -81,24 +110,6 @@ def delete_object(object_hash: str):
 def matches_pattern(filepath: str, pattern: str) -> bool:
     """Checks if a filepath matches a given pattern (supports '*' wildcard)"""
     return fnmatch(filepath, pattern)
-
-
-def get_root_path(path: str) -> bool:
-    """Checks if the given filepath is at the root of the repository."""
-    directory_name = os.path.dirname(path)
-    system_root_dir = os.path.abspath(os.sep)
-    error = ValueError("The directory is not version controlled!")
-    if directory_name == system_root_dir:
-        raise error
-
-    vcs_dir_name = f".{NAME}"
-    for dir in os.listdir(path):
-        if dir == vcs_dir_name:
-            return os.path.abspath(path)
-
-    parent_dir = os.path.abspath(os.path.join(directory_name, os.pardir))
-    return get_root_path(parent_dir)
-
 
 def store_commit(commit: Commit):
     """Store a commit object in the objects directory."""

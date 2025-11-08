@@ -1,7 +1,0 @@
-# Files to ignore
-.git/*
-src/*
-README.md
-main.py
-.gitignore
-__init__.py

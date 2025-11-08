@@ -16,6 +16,6 @@ def error_handler(func):
             return func(*args, **kwargs)
         except Exception as e:
             logger.error(f"Exception occured: {e}")
-            logger.debug(f"Traceback: {tb.format_exc()}")
+            logger.debug(tb.format_exc())
 
     return wrapper

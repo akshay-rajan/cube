@@ -29,15 +29,6 @@ class VCS:
             logger.info("VCS is already initialized.")
 
     @staticmethod
-    def _is_initialized() -> bool:
-        try:
-            utils.get_root_path(".")
-            return True
-        except ValueError:
-            logger.error("VCS is not initialized. Please run 'init' command first.")
-            return False
-
-    @staticmethod
     def _list_branches() -> list:
         branches = os.listdir(f"{ROOT}/refs/heads")
         current_branch = utils.get_current_branch()
@@ -60,10 +51,8 @@ class VCS:
     @staticmethod
     @cli.command()
     @click.argument("branch_name", required=False)
+    @utils.initialization_required
     def branch(branch_name: str = None):
-        if not VCS._is_initialized():
-            return
-
         if not branch_name:
             VCS._list_branches()
         else:        
@@ -72,9 +61,8 @@ class VCS:
     @staticmethod
     @cli.command()
     @error_handler
+    @utils.initialization_required
     def undo():
-        if not VCS._is_initialized():
-            return
         shutil.rmtree(ROOT)
         logger.info(f"VCS reset successful.")
 
@@ -111,10 +99,8 @@ class VCS:
     @cli.command()
     @click.argument("filepath")
     @error_handler
+    @utils.initialization_required
     def add(filepath: str):
-        if not VCS._is_initialized():
-            return
-
         if not os.path.isfile(filepath) and not os.path.isdir(filepath):
             logger.error(f"File or directory '{filepath}' does not exist.")
             return
@@ -159,10 +145,8 @@ class VCS:
     @staticmethod
     @cli.command()
     @error_handler
+    @utils.initialization_required
     def status():
-        if not VCS._is_initialized():
-            return
-
         index = Index(from_file=True)
         staged = index.list_entries()
         staged_paths = []
@@ -234,10 +218,8 @@ class VCS:
         '--message', '-m', prompt='message', help='Commit message.'
     )
     @error_handler
+    @utils.initialization_required
     def commit(message: str):
-        if not VCS._is_initialized():
-            return
-
         index = Index(from_file=True)
         index_entries = index.list_entries()
         if not index_entries:
@@ -257,10 +239,8 @@ class VCS:
     @cli.command()
     @click.argument("branch")
     @error_handler
+    @utils.initialization_required
     def switch(branch: str):
-        if not VCS._is_initialized():
-            return
-
         current_branch = utils.get_current_branch()
         if branch == current_branch:
             logger.info(f"Already on branch '{branch}'.")
@@ -284,10 +264,8 @@ class VCS:
     @staticmethod
     @cli.command()
     @error_handler
+    @utils.initialization_required
     def log():
-        if not VCS._is_initialized():
-            return
-        
         current_commit_hash = utils.get_head_commit_hash()
         if not current_commit_hash:
             logger.info("No commits yet!")

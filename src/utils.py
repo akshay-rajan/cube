@@ -36,6 +36,7 @@ def initialization_required(func):
         return func(*args, **kwargs)
     return wrapper
 
+
 def set_head(branch: str):
     """Sets the head to point to a branch"""
     with open(f".{NAME}/HEAD", "w") as file:
@@ -162,7 +163,7 @@ def update_branch_pointer(branch_name, commit_hash):
     branch_path = f".{NAME}/refs/heads/{branch_name}"
     os.makedirs(os.path.dirname(branch_path), exist_ok=True)
     with open(branch_path, "w") as branch_file:
-        branch_file.write(hash)
+        branch_file.write(commit_hash)
 
 def branch_exists(branch_name: str):
     """Returns True if the branch already exists, False otherwise"""

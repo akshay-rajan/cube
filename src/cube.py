@@ -44,8 +44,8 @@ class VCS:
             logger.error(f"Branch '{branch_name}' already exists.")
             return
 
-        current_commit = utils.get_head_commit_hash() or ""
-        utils.update_branch_pointer(branch_name, current_commit)
+        current_commit = utils.get_head_commit_hash()
+        utils.update_branch_pointer(branch_name, current_commit or "")
         logger.info(f"Branch '{branch_name}' created.")
 
     @staticmethod
@@ -89,7 +89,7 @@ class VCS:
         object_path = utils.get_object_path(file_hash)
         if not os.path.exists(object_path):
             utils.add_object(file_hash, filepath)
-            index.overwrite(filepath)
+            index.overwrite(filepath, file_hash)
         else:
             logger.info(f"Blob with hash {file_hash} already exists.")
 
@@ -152,23 +152,22 @@ class VCS:
         staged_paths = []
         staged_msg, modified_msg = "", ""
 
-        commit_hash = utils.get_head_commit_hash()
-        if commit_hash:
-            commit = VCS._get_commit(commit_hash)
+        last_commit_hash = utils.get_head_commit_hash()
+        if last_commit_hash:
+            commit = VCS._get_commit(last_commit_hash)
             logger.debug(f"Last commit tree:\n{commit.tree}\n")
 
-        if not staged:
-            logger.info("No files staged.")
-        else:
-            for entry in staged:
-                file_hash, filepath = entry.strip().split(" ", 1)
-                staged_paths.append(filepath)
-                current_hash = utils.hash_file(filepath) if os.path.isfile(filepath) else None
-                file_info = f"{filepath} {file_hash}"
+        if staged:
+            for file_path, file_hash in staged:
+                staged_paths.append(file_path)
+                current_hash = utils.hash_file(file_path) if os.path.isfile(file_path) else None
+                file_info = f"{file_path} {file_hash}"
                 if current_hash == file_hash:
                     staged_msg += f"\n\t{file_info}"
                 else:
                     modified_msg += f"\n\t{file_info} -> {current_hash or 'deleted'}"
+        else:
+            logger.info("No files staged.")
 
         untracked, untracked_msg = [], ""
         ignored_files = VCS._get_ignored_files()

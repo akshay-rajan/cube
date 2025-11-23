@@ -66,6 +66,7 @@ class VCS:
         shutil.rmtree(ROOT)
         logger.info(f"VCS reset successful.")
 
+    @staticmethod
     def _stage_file(filepath: str) -> str:
         """Converts a file to a blob and stores it in the objects directory"""
 

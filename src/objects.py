@@ -61,7 +61,7 @@ class Tree:
     def __init__(self, name:str, hash=None) -> None:
         self.name = name
         self.hash = hash
-        self.subtrees: Tree = []
+        self.subtrees: Tree = None
 
     def __eq__(self, other) -> bool:
         return isinstance(other, Tree) and self.name == other.name

@@ -229,9 +229,14 @@ class VCS:
         commit_tree = Tree(".")
         for filepath, file_hash in index_entries:
             commit_tree.add_subtrees(filepath, file_hash)
-        logger.debug(f"Commit tree: \n{commit_tree}")
 
         parent_commit_hash = utils.get_head_commit_hash()
+        if parent_commit_hash:
+            parent_commit = Commit.from_hash(parent_commit_hash)
+            parent_commit_tree = parent_commit.tree
+            commit_tree.merge(parent_commit_tree)
+        logger.debug(f"Commit tree: \n{commit_tree}")
+
         VCS._add_commit(commit_tree, parent_commit_hash, message)
         index.clear()
 

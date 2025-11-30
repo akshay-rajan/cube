@@ -139,7 +139,7 @@ def get_current_branch() -> str:
     raise ValueError("HEAD is in a detached state.")
 
 
-def get_head_commit_hash() -> str:
+def get_head_commit_hash() -> str | None:
     """Returns the commit hash that HEAD points to"""
     try:
         with open(f".{NAME}/HEAD", "r") as file:

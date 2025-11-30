@@ -79,6 +79,9 @@ class Tree:
                 res += f"\n{prefix}├── {subtree._str_helper(prefix + '│   ')}"
         return res
 
+    def _is_file(self) -> bool:
+        return len(self.subtrees) == 0 and self.hash is not None
+
     def add_subtrees(self, path, hash) -> None:
         normalized_path = os.path.normpath(path)
         if os.path.basename(path) == normalized_path:
@@ -98,6 +101,25 @@ class Tree:
         dir.add_subtrees(child_path, hash)
         self.subtrees.append(dir)
 
+    def merge(self, other: 'Tree') -> None:
+        """Merge another tree into the current tree"""
+        if self._is_file():
+            if other._is_file():
+                self.hash = other.hash
+            return
+
+        new_trees = []
+        for subtree_1 in self.subtrees:
+            for subtree_2 in other.subtrees:
+                if subtree_1 == subtree_2:
+                    subtree_1.merge(subtree_2)
+                    new_trees.append(subtree_2)
+                    break
+
+        for subtree_2 in other.subtrees:
+            if subtree_2 not in new_trees:
+                self.subtrees.append(subtree_2)        
+        
 
 class Commit:
     """Commit object."""

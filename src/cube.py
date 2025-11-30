@@ -1,5 +1,6 @@
 import os
 import shutil
+from types import NoneType
 import click
 
 from src.config import cli, error_handler
@@ -251,13 +252,23 @@ class VCS:
             logger.info(f"Already on branch '{branch}'.")
             return
 
+        index = Index(from_file=True)
+        if not index.is_empty():
+            logger.error("Working directory contains changes that are not committed!")
+            return
+
         if not utils.branch_exists(branch):
             logger.error(f"Branch '{branch}' does not exist!")
             return
         utils.set_head(branch)
 
+        current_commit_hash = utils.get_head_commit_hash()
+        if current_commit_hash:
+            current_commit = Commit.from_hash(current_commit_hash)
+            utils.overwrite_working_directory(current_commit)
+
     @staticmethod
-    def _log_helper(commit: Commit, hash: str):
+    def _log_helper(commit: Commit | None, hash: str):
         if not commit:
             return
         
@@ -278,3 +289,4 @@ class VCS:
         
         commit = Commit.from_hash(current_commit_hash)
         VCS._log_helper(commit, current_commit_hash)
+

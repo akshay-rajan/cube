@@ -53,6 +53,9 @@ class Index:
     def list_entries(self):
         return self.entries.items()
 
+    def is_empty(self):
+        return len(self.entries) == 0
+
 
 class Tree:
     """

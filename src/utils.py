@@ -171,3 +171,7 @@ def branch_exists(branch_name: str):
     if os.path.isfile(branch_path):
         return True
     return False
+
+def overwrite_working_directory(commit: Commit):
+    pass
+
